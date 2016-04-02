@@ -9,6 +9,9 @@ if [ -z $P ]; then
     mv ~/.tmux.conf ~/.tmux.conf.ori
     ln -s $DIR/tmux ~/.tmux
     ln -s $DIR/tmux.conf ~/.tmux.conf
+    [[ "$(tmux -V)" == "tmux 1.6" ]] && ln -s $DIR/tmux/tmux.conf_1_6 ~/.tmux.conf
+    [[ "$(tmux -V)" == "tmux 2.0" ]] && ln -s $DIR/tmux/tmux.conf_2_0 ~/.tmux.conf
+    [[ "$(tmux -V)" == "tmux 2.1" ]] && ln -s $DIR/tmux/tmux.conf_2_1 ~/.tmux.conf
     exit $?
 fi
 
@@ -29,6 +32,8 @@ rsync -rptvz --delete --exclude ".git" $DIR/tmux.conf $P:~/.tmux.conf
 #'
 
 ssh "$P" '[[ "$(tmux -V)" == "tmux 1.6" ]] && cp ~/.tmux/tmux.conf_1_6 ~/.tmux.conf'
+ssh "$P" '[[ "$(tmux -V)" == "tmux 2.0" ]] && cp ~/.tmux/tmux.conf_2_O ~/.tmux.conf'
+ssh "$P" '[[ "$(tmux -V)" == "tmux 2.1" ]] && cp ~/.tmux/tmux.conf_2_1 ~/.tmux.conf'
 
 
 

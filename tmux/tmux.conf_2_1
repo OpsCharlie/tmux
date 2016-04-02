@@ -1,0 +1,206 @@
+# tmux 2.1 config
+# if run as "tmux attach", create a session if one does not already exist
+#new-session -n $HOST
+
+
+#Start windows and panes at 1, not 0,
+set -g base-index 1
+set -g pane-base-index 1
+
+
+# renumber windows sequentially after closing any of them
+set -g renumber-windows on
+
+
+# UTF-8
+set -g utf8 on
+set -g status-utf8 on
+#setw -g window-status-current-format "|#I:#W|"
+
+
+# set history
+set -g history-limit 50000
+
+
+# set xterm
+set -g default-terminal "xterm-256color"
+setw -g xterm-keys on
+
+
+# escape fix
+set -s escape-time 0
+
+# unbind keys
+unbind C-b
+unbind C-a
+unbind %
+unbind ,
+unbind .
+unbind n
+unbind p
+unbind [
+unbind '"'
+unbind l
+unbind &
+unbind "'"
+
+
+# remap prefix from 'C-b' to 'C-a'
+set-option -g prefix C-a
+bind C-a    send-prefix
+bind a      send-key C-a
+
+
+# Enable/disable status bar
+bind b      set status
+
+
+# Show a # in the window title when activity
+#  *         Denotes the current window.
+#  -         Marks the last window (previously selected).
+#  #         Window is monitored and activity has been detected.
+#  !         A bell has occurred in the window.
+#  ~         The window has been silent for the monitor-silence interval.
+#  Z         The window's active pane is zoomed.
+set-window-option -g monitor-activity on
+set-window-option -g window-status-activity-attr reverse
+
+
+# If I don't set a title on a window, use the program name for the window title
+set-window-option -g automatic-rename on
+
+
+# However, don't let terminal escape sequences rename my windows
+set-window-option -g allow-rename off
+
+
+# Copy mode
+# C-a C-v or F7: copy mode
+#   v or <space> : begin selection
+#   y or <enter>: yank selection to buffer and clipboard
+#
+# Alt-Insert: Paste buffer
+#
+# C-a p: Paste buffer to clipboard
+#
+setw -g mode-keys vi
+bind -t   vi-copy Escape cancel
+bind      C-v            copy-mode
+bind -t   vi-copy 'v'    begin-selection
+bind -t   vi-copy 'y'    copy-pipe "xsel -b -i"
+unbind -t vi-copy Enter
+bind -t   vi-copy Enter  copy-pipe "xsel -b -i"
+bind -n   M-IC           paste-buffer
+bind      p              run-shell "tmux show-buffer | xsel -b -i"
+#bind -n   C-v            paste-buffer
+#bind      p               run "tmux set-buffer \"$(xsel -o)\"; tmux paste-buffer"
+
+
+# Windows and panes
+# tmux 2.0 needed for #{pane_current_path} else use $PWD
+bind    |       split-window -h -c "#{pane_current_path}"
+bind    &       split-window -h -c "#{pane_current_path}"
+bind    -       split-window -v -c "#{pane_current_path}"
+bind    c       new-window -c "#{pane_current_path}"
+bind    k       kill-pane
+bind    K       kill-window
+
+
+# F-keys
+bind -n F2      new-window -c "#{pane_current_path}"
+bind -n C-F2    split-window -h -c "#{pane_current_path}"
+bind -n S-F2    split-window -v -c "#{pane_current_path}"
+bind -n F3      previous-window
+bind -n F4      next-window
+bind -n F6      detach-client
+bind -n F7      copy-mode
+bind -n C-F6    kill-pane
+
+
+# Sessions
+bind    C-s     new-session
+#bind    q       confirm-before kill-session
+bind    q       ls \; command-prompt  "kill-session -t '%%'"
+
+
+# kill Server
+bind    Q       confirm-before kill-server
+
+
+
+# reload config
+bind    r       source-file ~/.tmux.conf \; display-message "Config reloaded..."
+
+
+# SHIFT arrow to select pane
+bind -n S-Left  select-pane -L
+bind -n S-Right select-pane -R
+bind -n S-Up    select-pane -U
+bind -n S-Down  select-pane -D
+
+
+# ALT arrow to next window
+bind -n M-Right next-window
+bind -n M-Left  previous-window
+
+
+bind    R       refresh-client
+
+
+# Toggle mouse on with  m
+bind    m \
+  set -g mouse-utf8 on \;\
+  set -g mouse on \;\
+  display 'Mouse: ON'
+
+# Toggle mouse off with  M
+bind    M \
+  set -g mouse-utf8 on \;\
+  set -g mouse on \;\
+  display 'Mouse: OFF'
+
+
+# Enable mouse control (clickable windows, panes, resizable panes)
+set -g mouse-utf8 on
+set -g mouse on
+
+# status bar
+set-option -g status-interval 2
+set-option -g status-right-length 120
+#set -g status-right '#(~/.tmux/battery.sh)#(~/.tmux/cpu.sh)#(~/.tmux/cpu_avg_temp.sh)#(~/.tmux/disk.sh)#(~/.tmux/netspeed.sh)'
+set -g status-right '#(~/.tmux/updates_available.sh)#(~/.tmux/uptime.sh)#(~/.tmux/reboot.sh)#(~/.tmux/cpu.sh)#(~/.tmux/disk.sh)#(~/.tmux/netspeed.sh)'
+
+
+
+#### COLOUR (Solarized 256)
+
+# default statusbar colors
+set-option -g status-bg colour235 #base02
+set-option -g status-fg colour136 #yellow
+set-option -g status-attr default
+
+# default window title colors
+set-window-option -g window-status-fg colour244 #base0
+set-window-option -g window-status-bg default
+#set-window-option -g window-status-attr dim
+
+# active window title colors
+set-window-option -g window-status-current-fg colour166 #orange
+set-window-option -g window-status-current-bg default
+#set-window-option -g window-status-current-attr bright
+
+# pane border
+set-option -g pane-border-fg colour240 #yellow
+set-option -g pane-active-border-fg colour136 #base01
+
+# message text
+set-option -g message-bg colour235 #base02
+set-option -g message-fg colour166 #orange
+
+# pane number display
+set-option -g display-panes-active-colour colour33 #blue
+set-option -g display-panes-colour colour166 #orange
+
+# clock
+set-window-option -g clock-mode-colour colour64 #green
+
