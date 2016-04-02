@@ -5,8 +5,8 @@ DIR=$(dirname $(readlink -f $0))
 
 if [ -z $P ]; then
     echo copy files to homedir
-    mv ~/.tmux ~/.tmux.ori
-    mv ~/.tmux.conf ~/.tmux.conf.ori
+    mv ~/.tmux ~/.tmux.bak
+    mv ~/.tmux.conf ~/.tmux.conf.bak
     ln -s $DIR/tmux ~/.tmux
     [[ "$(tmux -V)" == "tmux 1.6" ]] && ln -s $DIR/tmux/tmux.conf_1_6 ~/.tmux.conf
     [[ "$(tmux -V)" == "tmux 2.0" ]] && ln -s $DIR/tmux/tmux.conf_2_0 ~/.tmux.conf
