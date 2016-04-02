@@ -8,7 +8,6 @@ if [ -z $P ]; then
     mv ~/.tmux ~/.tmux.ori
     mv ~/.tmux.conf ~/.tmux.conf.ori
     ln -s $DIR/tmux ~/.tmux
-    ln -s $DIR/tmux.conf ~/.tmux.conf
     [[ "$(tmux -V)" == "tmux 1.6" ]] && ln -s $DIR/tmux/tmux.conf_1_6 ~/.tmux.conf
     [[ "$(tmux -V)" == "tmux 2.0" ]] && ln -s $DIR/tmux/tmux.conf_2_0 ~/.tmux.conf
     [[ "$(tmux -V)" == "tmux 2.1" ]] && ln -s $DIR/tmux/tmux.conf_2_1 ~/.tmux.conf
