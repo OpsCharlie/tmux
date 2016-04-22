@@ -23,7 +23,7 @@ set -g history-limit 50000
 
 
 # set xterm
-set -g default-terminal "xterm-256color"
+set -g default-terminal "screen-256color"
 setw -g xterm-keys on
 
 
