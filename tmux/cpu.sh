@@ -17,6 +17,8 @@ NUMCPU=$(cat /proc/cpuinfo | grep proc | wc -l)
 LC_NUMERIC="en_US.UTF-8"
 
 if [ $COL -gt 74 ]; then
+    USERS=$(users | wc -w)
+    [[ $USERS -ne 1 ]] && printf "U:%d ⡇ " $USERS
     if (( $(bc <<< "$CPU > $NUMCPU") )); then
         printf "L:"; printf "#[default]#[fg=red]"; printf "%.2f" $CPU; printf "#[default]#[fg=colour136]"
     else
