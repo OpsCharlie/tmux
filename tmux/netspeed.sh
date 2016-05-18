@@ -53,7 +53,7 @@ elif (( $(bc <<< "$RKBPS > 1024") )); then
     unitr="Mb"
 fi
 
-if [ "$COL" -gt 89 ]; then
+if [ "$COL" -gt 101 ]; then
     if [ "$COL" -gt 119 ]; then
         printf "%s: %s ▾%5.1f%s ▴%5.1f%s" $IF $IP $RKBPS $unitr $TKBPS $unitt
     else
