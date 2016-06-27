@@ -91,7 +91,7 @@ bind -t   vi-copy 'v'    begin-selection
 #unbind -t vi-copy Enter
 #bind -t   vi-copy Enter  copy-pipe "xsel -b -i"
 bind -n   M-IC           paste-buffer
-bind      p              run-shell "tmux show-buffer | xsel -b -i"
+bind      y              run-shell "tmux show-buffer | xsel -b -i"
 #bind -n   C-v            paste-buffer
 #bind      p               run "tmux set-buffer \"$(xsel -o)\"; tmux paste-buffer"
 
