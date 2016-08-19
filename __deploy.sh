@@ -1,16 +1,16 @@
 #!/bin/bash
 
 P=$1
-DIR=$(dirname $(readlink -f $0))
+DIR=$(dirname "$(readlink -f "$0")")
 
-if [ -z $P ]; then
+if [ -z "$P" ]; then
     echo copy files to homedir
     mv ~/.tmux ~/.tmux.bak
     mv ~/.tmux.conf ~/.tmux.conf.bak
-    ln -s $DIR/tmux ~/.tmux
-    [[ "$(tmux -V)" == "tmux 1.6" ]] && ln -s $DIR/tmux/tmux.conf_1_6 ~/.tmux.conf
-    [[ "$(tmux -V)" == "tmux 2.0" ]] && ln -s $DIR/tmux/tmux.conf_2_0 ~/.tmux.conf
-    [[ "$(tmux -V)" == "tmux 2.1" ]] && ln -s $DIR/tmux/tmux.conf_2_1 ~/.tmux.conf
+    ln -s "$DIR"/tmux ~/.tmux
+    [[ "$(tmux -V)" == "tmux 1.6" || "$(tmux -V)" == "tmux 1.8" ]] && ln -s "$DIR"/tmux/tmux.conf_1_6 ~/.tmux.conf
+    [[ "$(tmux -V)" == "tmux 2.0" ]] && ln -s "$DIR"/tmux/tmux.conf_2_0 ~/.tmux.conf
+    [[ "$(tmux -V)" == "tmux 2.1" ]] && ln -s "$DIR"/tmux/tmux.conf_2_1 ~/.tmux.conf
     exit $?
 fi
 
@@ -21,8 +21,8 @@ if [ "$(expr match "$P" '.*\(:\)')" = ":" ]; then
     exit 1
 fi
 
-rsync -rptvz --delete --exclude ".git" $DIR/tmux/ $P:~/.tmux
-rsync -rptvz --delete --exclude ".git" $DIR/tmux.conf $P:~/.tmux.conf
+rsync -rptvz --delete --exclude ".git" "$DIR"/tmux/ "$P":~/.tmux
+rsync -rptvz --delete --exclude ".git" "$DIR"/tmux.conf "$P":~/.tmux.conf
 
 
 #echo '
@@ -31,6 +31,7 @@ rsync -rptvz --delete --exclude ".git" $DIR/tmux.conf $P:~/.tmux.conf
 #'
 
 ssh "$P" '[[ "$(tmux -V)" == "tmux 1.6" ]] && cp ~/.tmux/tmux.conf_1_6 ~/.tmux.conf'
+ssh "$P" '[[ "$(tmux -V)" == "tmux 1.8" ]] && cp ~/.tmux/tmux.conf_1_6 ~/.tmux.conf'
 ssh "$P" '[[ "$(tmux -V)" == "tmux 2.0" ]] && cp ~/.tmux/tmux.conf_2_O ~/.tmux.conf'
 ssh "$P" '[[ "$(tmux -V)" == "tmux 2.1" ]] && cp ~/.tmux/tmux.conf_2_1 ~/.tmux.conf'
 
