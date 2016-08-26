@@ -116,6 +116,7 @@ bind -n F4      next-window
 bind -n F6      detach-client
 bind -n F7      copy-mode
 bind -n C-F6    kill-pane
+bind -n F12     source ~/.tmux/f-keys.disable \; display-message "Fn-keys: DISABLED"
 
 
 # Sessions
