@@ -7,10 +7,12 @@ if [ -z "$P" ]; then
     echo copy files to homedir
     mv ~/.tmux ~/.tmux.bak
     mv ~/.tmux.conf ~/.tmux.conf.bak
-    ln -s "$DIR"/tmux ~/.tmux
-    [[ "$(tmux -V)" == "tmux 1.6" || "$(tmux -V)" == "tmux 1.8" ]] && ln -s "$DIR"/tmux/tmux.conf_1_6 ~/.tmux.conf
-    [[ "$(tmux -V)" == "tmux 2.0" ]] && ln -s "$DIR"/tmux/tmux.conf_2_0 ~/.tmux.conf
-    [[ "$(tmux -V)" == "tmux 2.1" ]] && ln -s "$DIR"/tmux/tmux.conf_2_1 ~/.tmux.conf
+    cp -r "$DIR"/tmux ~/.tmux
+    X="$(tmux -V)"
+    [[ "$X" == "tmux 1.6" || "$X" == "tmux 1.8" ]] && cp "$DIR"/tmux/tmux.conf_1_6 ~/.tmux.conf
+    [[ "$X" == "tmux 2.0" ]] && cp "$DIR"/tmux/tmux.conf_2_0 ~/.tmux.conf
+    [[ "$X" == "tmux 2.1" ]] && cp "$DIR"/tmux/tmux.conf_2_1 ~/.tmux.conf
+    [[ "$X" == "tmux 2.2" ]] && cp "$DIR"/tmux/tmux.conf_2_2 ~/.tmux.conf
     exit $?
 fi
 
@@ -34,6 +36,7 @@ ssh "$P" '[[ "$(tmux -V)" == "tmux 1.6" ]] && cp ~/.tmux/tmux.conf_1_6 ~/.tmux.c
 ssh "$P" '[[ "$(tmux -V)" == "tmux 1.8" ]] && cp ~/.tmux/tmux.conf_1_6 ~/.tmux.conf'
 ssh "$P" '[[ "$(tmux -V)" == "tmux 2.0" ]] && cp ~/.tmux/tmux.conf_2_O ~/.tmux.conf'
 ssh "$P" '[[ "$(tmux -V)" == "tmux 2.1" ]] && cp ~/.tmux/tmux.conf_2_1 ~/.tmux.conf'
+ssh "$P" '[[ "$(tmux -V)" == "tmux 2.2" ]] && cp ~/.tmux/tmux.conf_2_2 ~/.tmux.conf'
 
 
 
