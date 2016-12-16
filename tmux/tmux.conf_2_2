@@ -1,4 +1,4 @@
-# tmux 2.1 config
+# tmux 2.2 config
 # if run as "tmux attach", create a session if one does not already exist
 #new-session -n $HOST
 

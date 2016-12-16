@@ -1,4 +1,4 @@
-# tmux 1.6 config 
+# tmux 1.6 - 1.8 config 
 # if run as "tmux attach", create a session if one does not already exist
 #new-session -n $HOST
 
@@ -91,7 +91,7 @@ bind -t   vi-copy 'v'    begin-selection
 #unbind -t vi-copy Enter
 #bind -t   vi-copy Enter  copy-pipe "xsel -b -i"
 bind -n   M-IC           paste-buffer
-bind      y              display-message "Buffer Copied..."\; run-shell "tmux show-buffer | nc localhost 5556"
+bind      y              run-shell "tmux show-buffer | nc localhost 5556"\; run-shell "tmux show-buffer | nc localhost 5556"\; display-message "Buffer Copied..."
 # bind      y              run-shell "tmux show-buffer | xsel -b -i"
 #bind -n   C-v            paste-buffer
 #bind      p               run "tmux set-buffer \"$(xsel -o)\"; tmux paste-buffer"
@@ -211,5 +211,4 @@ set-option -g display-panes-colour colour166 #orange
 
 # clock
 set-window-option -g clock-mode-colour colour64 #green
-
 
