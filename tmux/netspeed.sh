@@ -5,7 +5,8 @@ LC_NUMERIC="en_US.UTF-8"
 cache=/tmp/netspeed.tmux
 
 IF=$(ip route get 8.8.8.8 | head -n1 | cut -d' ' -f5)
-IP=`/sbin/ifconfig $IF | grep "inet addr" | awk -F: '{print $2}' | awk '{print $1}'`
+IP=$(/sbin/ip address show $IF | awk '/inet / {print $2}')
+IP=${IP%%/*}
 COL=$(tmux list-windows | head -1 | sed 's/.*\[\([0-9]\{1,4\}\)x[0-9]\{1,4\}\].*/\1/g')
 
 unitr="kb"
@@ -58,7 +59,7 @@ if [ "$COL" -gt 101 ]; then
         printf "%s: %s ▾%5.1f%s ▴%5.1f%s" $IF $IP $RKBPS $unitr $TKBPS $unitt
     else
         printf "%s ▾%5.1f%s ▴%5.1f%s" $IP $RKBPS $unitr $TKBPS $unitt
-    fi 
+    fi
 else
     printf "▾%5.1f%s ▴%5.1f%s" $RKBPS $unitr $TKBPS $unitt
 fi
