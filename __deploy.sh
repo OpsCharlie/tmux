@@ -6,9 +6,7 @@ DIR=$(dirname "$(readlink -f "$0")")
 
 if [ -z "$P" ]; then
     echo copy files to homedir
-    mv ~/.tmux ~/.tmux.bak
-    mv ~/.tmux.conf ~/.tmux.conf.bak
-    cp -r "$DIR"/tmux ~/.tmux
+    rsync -a --delete "$DIR/tmux/" ~/.tmux/
     X="$(tmux -V)"
     case "$X" in
         "tmux 1.6" | "tmux 1.8") cp "$DIR"/tmux/tmux.conf_1_6 ~/.tmux.conf ;;
