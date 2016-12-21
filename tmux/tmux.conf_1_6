@@ -103,6 +103,8 @@ bind    |       split-window -h
 bind    &       split-window -h 
 bind    -       split-window -v 
 bind    c       new-window 
+bind    p       previous-window
+bind    n       next-window
 bind    k       kill-pane
 bind    K       kill-window
 
