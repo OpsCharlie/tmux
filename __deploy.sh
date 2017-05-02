@@ -3,6 +3,8 @@ set -e
 
 P=$1
 DIR=$(dirname "$(readlink -f "$0")")
+# set manual for use with ansible
+DIR=/home/carl/tmux
 
 if [ -z "$P" ]; then
     echo copy files to homedir
