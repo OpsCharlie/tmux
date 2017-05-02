@@ -6,8 +6,10 @@ COL=$(tmux list-windows | head -1 | sed 's/.*\[\([0-9]\{1,4\}\)x[0-9]\{1,4\}\].*
 
 #        CPU=`eval $(awk '/^cpu /{print "previdle=" $5 "; prevtotal=" $2+$3+$4+$5 }' /proc/stat); sleep 0.4; eval $(awk '/^cpu /{print "idle=" $5 "; total=" $2+$3+$4+$5 }' /proc/stat); intervaltotal=$((total-${prevtotal:-0})); echo "$((100*( (intervaltotal) - ($idle-${previdle:-0}) ) / (intervaltotal) ))" | tr '.' ','`
 
-if [[ $(free -V | cut -d" " -f4) > "3.3.10" ]]; then
-    USED_MEM=$(free | awk '/Mem:/{print (100 - ($7 / $2 * 100.0));}')
+
+FREE=$(free -V | cut -d" " -f4)
+if [[ "$FREE" > "3.3.10" ]] || [[ "$FREE" == "3.3.10" ]] ; then
+    USED_MEM=$(free | awk '/Mem:/ {print (100 - ($7 / $2 * 100.0));}')
 else
     USED_MEM=$(free | awk '/buffers\/cache/{print (100 - ($4/($3+$4) * 100.0));}')
 fi
