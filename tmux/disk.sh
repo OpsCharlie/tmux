@@ -2,7 +2,7 @@
 
 
 LC_NUMERIC="en_US.UTF-8"
-for i in $(df -h | awk '{ print $5 }'  | grep -v "Use%" | tr -d "%"); do
+for i in $(df -h | grep -v '/dev/loop' | awk '{ print $5 }'  | grep -v "Use%" | tr -d "%"); do
     if [ "$i" -gt "90" ]; then
         X=""
         echo -ne "#[default]#[fg=red]DF!!#[default]#[fg=colour136] ⡇ "
