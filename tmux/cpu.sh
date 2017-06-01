@@ -15,7 +15,8 @@ else
 fi
 
 CPU=$(cat /proc/loadavg | cut -d' ' -f1)
-NUMCPU=$(cat /proc/cpuinfo | grep proc | wc -l)
+# NUMCPU=$(cat /proc/cpuinfo | grep proc | wc -l)
+NUMCPU=$(nproc)
 LC_NUMERIC="en_US.UTF-8"
 
 if [ $COL -gt 74 ]; then
