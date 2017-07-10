@@ -9,20 +9,22 @@ IP=$(/sbin/ip address show $IF | awk '/inet / {print $2}')
 IP=${IP%%/*}
 COL=$(tmux list-windows | head -1 | sed 's/.*\[\([0-9]\{1,4\}\)x[0-9]\{1,4\}\].*/\1/g')
 
-unitr="kb"
-unitt="kb"
+if [ ! -e $cache ]; then
+    SEC1="$(date +'%s')"
+    R1=
+    T1=
+    for DEV in /sys/class/net/*; do
+        R1=$((R1 + $(cat $DEV/statistics/rx_bytes)))
+    done
+    for DEV in /sys/class/net/*; do
+        T1=$((T1 + $(cat $DEV/statistics/tx_bytes)))
+    done
+    sleep 1
+else
+    read SEC1 R1 T1 < $cache
+fi
 
-R1=
-T1=
-for DEV in /sys/class/net/*; do
-    R1=$((R1 + $(cat $DEV/statistics/rx_bytes)))
-done
-for DEV in /sys/class/net/*; do
-    T1=$((T1 + $(cat $DEV/statistics/tx_bytes)))
-done
-
-sleep 1
-
+SEC2="$(date +'%s')"
 R2=
 T2=
 for DEV in /sys/class/net/*; do
@@ -31,35 +33,55 @@ done
 for DEV in /sys/class/net/*; do
     T2=$((T2 + $(cat $DEV/statistics/tx_bytes)))
 done
+echo "$SEC2 $R2 $T2" > $cache
 
-TKBPS=$(bc <<< "($T2 - $T1) * 8 / 1024")
-RKBPS=$(bc <<< "($R2 - $R1) * 8 / 1024")
-if (( $(bc <<< "$TKBPS < 0") )); then TKBPS=0; fi
-if (( $(bc <<< "$RKBPS < 0") )); then RKBPS=0; fi
+SEC=$(bc <<< "$SEC2 - $SEC1")
+
+TBPS=$(bc <<< "($T2 - $T1) * 8 / $SEC") # convert bytes in bits
+RBPS=$(bc <<< "($R2 - $R1) * 8 / $SEC") # convert bytes in bits
+if (( $(bc <<< "$TBPS < 0") )); then TBPS=0; fi
+if (( $(bc <<< "$RBPS < 0") )); then RBPS=0; fi
+RTBPS=$TBPS
+RRBPS=$RBPS
+
+# base-10 units
+#1 kB = 1,000 bytes (Note: small k)
+#1 MB = 1,000 kB = 1,000,000 bytes
+unitr="b"
+unitt="b"
 
 
-if (( $(bc <<< "$TKBPS > 1048576") )); then
-    TKBPS=$(awk "BEGIN { print $TKBPS/1024/1024  }")
+if (( $(bc <<< "$TBPS > 1000000000") )); then
+    RTBPS=$(bc <<< "$TBPS/1000000000")
     unitt="Gb"
-elif (( $(bc <<< "$TKBPS > 1024") )); then
-    TKBPS=$(awk "BEGIN { print $TKBPS/1024  }")
+elif (( $(bc <<< "$TBPS > 1000000") )); then
+    RTBPS=$(bc <<< "$TBPS/1000000")
     unitt="Mb"
+elif (( $(bc <<< "$TBPS > 1000") )); then
+    RTBPS=$(bc <<< "$TBPS/1000")
+    unitt="Kb"
 fi
 
-if (( $(bc <<< "$RKBPS > 1048576") )); then
-    RKBPS=$(awk "BEGIN { print $TKBPS/1024/1024  }")
-    unitr="Gb"
-elif (( $(bc <<< "$RKBPS > 1024") )); then
-    RKBPS=$(awk "BEGIN { print $RKBPS/1024  }")
-    unitr="Mb"
+
+if (( $(bc <<< "$RBPS > 1000000000") )); then
+    RRBPS=$(bc <<< "$RBPS/1000000000")
+    unitt="Gb"
+elif (( $(bc <<< "$RBPS > 1000000") )); then
+    RRBPS=$(bc <<< "$RBPS/1000000")
+    unitt="Mb"
+elif (( $(bc <<< "$RBPS > 1000") )); then
+    RRBPS=$(bc <<< "$RBPS/1000")
+    unitt="Kb"
 fi
+
+
 
 if [ "$COL" -gt 101 ]; then
     if [ "$COL" -gt 119 ]; then
-        printf "%s: %s ▾%5.1f%s ▴%5.1f%s" $IF $IP $RKBPS $unitr $TKBPS $unitt
+        printf "%s: %s ▾%3.0f%2s ▴%3.0f%2s" $IF $IP $RRBPS $unitr $RTBPS $unitt
     else
-        printf "%s ▾%5.1f%s ▴%5.1f%s" $IP $RKBPS $unitr $TKBPS $unitt
+        printf "%s ▾%3.0f%2s ▴%3.0f%2s" $IP $RRBPS $unitr $RTBPS $unitt
     fi
 else
-    printf "▾%5.1f%s ▴%5.1f%s" $RKBPS $unitr $TKBPS $unitt
+    printf "▾%3.0f%2s ▴%3.0f%2s" $RRBPS $unitr $RTBPS $unitt
 fi
