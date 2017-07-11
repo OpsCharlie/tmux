@@ -2,7 +2,7 @@
 
 TMP=/tmp/updates.tmux
 
-# [ -e $TMP ] ||  /usr/lib/update-notifier/apt-check &>$TMP
+[ -e $TMP ] ||  /usr/lib/update-notifier/apt-check &>$TMP
 
 if test $(find $TMP -mmin +10 &>/dev/null); then
     /usr/lib/update-notifier/apt-check &>$TMP

@@ -1,11 +1,10 @@
 #!/bin/bash
 
+COL=$(tmux list-windows | head -1 | sed 's/.*\[\([0-9]\{1,4\}\)x[0-9]\{1,4\}\].*/\1/g')
 
 u=
 idle=
 str=
-#COL=$(tmux list-windows | head -1 | cut -d" " -f 5 | tr -d "[|]" | cut -d"x" -f1)
-COL=$(tmux list-windows | head -1 | sed 's/.*\[\([0-9]\{1,4\}\)x[0-9]\{1,4\}\].*/\1/g')
 
 
 if [ "$COL" -gt 75 ]; then

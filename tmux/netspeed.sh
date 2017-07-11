@@ -1,13 +1,13 @@
 #!/bin/bash
 
 LC_NUMERIC="en_US.UTF-8"
+COL=$(tmux list-windows | head -1 | sed 's/.*\[\([0-9]\{1,4\}\)x[0-9]\{1,4\}\].*/\1/g')
 
 cache=/tmp/netspeed.tmux
 
 IF=$(ip route get 8.8.8.8 | head -n1 | cut -d' ' -f5)
 IP=$(/sbin/ip address show $IF | awk '/inet / {print $2}')
 IP=${IP%%/*}
-COL=$(tmux list-windows | head -1 | sed 's/.*\[\([0-9]\{1,4\}\)x[0-9]\{1,4\}\].*/\1/g')
 
 if [ ! -e $cache ]; then
     SEC1="$(date +'%s')"

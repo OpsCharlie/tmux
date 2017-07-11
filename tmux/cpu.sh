@@ -1,10 +1,9 @@
 #!/bin/bash
 
-#COL=$(tmux list-windows | head -1 | cut -d" " -f 5 | tr -d "[|]" | cut -d"x" -f1)
 COL=$(tmux list-windows | head -1 | sed 's/.*\[\([0-9]\{1,4\}\)x[0-9]\{1,4\}\].*/\1/g')
+LC_NUMERIC="en_US.UTF-8"
 
 
-#        CPU=`eval $(awk '/^cpu /{print "previdle=" $5 "; prevtotal=" $2+$3+$4+$5 }' /proc/stat); sleep 0.4; eval $(awk '/^cpu /{print "idle=" $5 "; total=" $2+$3+$4+$5 }' /proc/stat); intervaltotal=$((total-${prevtotal:-0})); echo "$((100*( (intervaltotal) - ($idle-${previdle:-0}) ) / (intervaltotal) ))" | tr '.' ','`
 
 
 function ver { 
@@ -21,7 +20,6 @@ fi
 CPU=$(cat /proc/loadavg | cut -d' ' -f1)
 # NUMCPU=$(cat /proc/cpuinfo | grep proc | wc -l)
 NUMCPU=$(nproc)
-LC_NUMERIC="en_US.UTF-8"
 
 if [ $COL -gt 74 ]; then
     # USERS=$(users | wc -w)    # logged on users
