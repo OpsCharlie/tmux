@@ -11,8 +11,8 @@ IP=${IP%%/*}
 
 if [ ! -e $cache ]; then
     SEC1="$(date +'%s')"
-    R1=
-    T1=
+    R1=0
+    T1=0
     for DEV in /sys/class/net/*; do
         R1=$((R1 + $(cat $DEV/statistics/rx_bytes)))
     done
@@ -25,8 +25,8 @@ else
 fi
 
 SEC2="$(date +'%s')"
-R2=
-T2=
+R2=0
+T2=0
 for DEV in /sys/class/net/*; do
     R2=$((R2 + $(cat $DEV/statistics/rx_bytes)))
 done
@@ -65,13 +65,13 @@ fi
 
 if (( $(bc <<< "$RBPS > 1000000000") )); then
     RRBPS=$(bc <<< "$RBPS/1000000000")
-    unitt="Gb"
+    unitr="Gb"
 elif (( $(bc <<< "$RBPS > 1000000") )); then
     RRBPS=$(bc <<< "$RBPS/1000000")
-    unitt="Mb"
+    unitr="Mb"
 elif (( $(bc <<< "$RBPS > 1000") )); then
     RRBPS=$(bc <<< "$RBPS/1000")
-    unitt="Kb"
+    unitr="Kb"
 fi
 
 
