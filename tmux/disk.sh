@@ -17,7 +17,7 @@ if [ ! -e $cache ]; then
     R1=
     W1=
 
-    for DEV in $(ls /sys/block/ | egrep -v "ram|loop"); do
+    for DEV in $(ls /sys/block/ | egrep -v "ram|loop|md"); do
         R1=$((R1 + $(awk '{print $3}' /sys/block/$DEV/stat)))
         W1=$((W1 + $(awk '{print $7}' /sys/block/$DEV/stat)))
     done
@@ -30,7 +30,7 @@ SEC2="$(date +'%s')"
 R2=
 W2=
 
-for DEV in $(ls /sys/block/ | egrep -v "ram|loop"); do
+for DEV in $(ls /sys/block/ | egrep -v "ram|loop|md"); do
     R2=$((R2 + $(awk '{print $3}' /sys/block/$DEV/stat)))
     W2=$((W2 + $(awk '{print $7}' /sys/block/$DEV/stat)))
 done
