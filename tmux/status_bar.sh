@@ -285,7 +285,10 @@ _temp () {
         case "$OSTYPE" in
             linux-gnu)
                 if which sensors > /dev/null; then
-                    sensors | awk '/^Core/ {print $3;}' | grep -oEi '[0-9]+.[0-9]+' | awk '{TOTAL+=$1; COUNT+=1} END {printf "%d%s", TOTAL/COUNT, "°C ⡇ "}'
+                    T=$(sensors | awk '/^Core/ {print $3;}')
+                    if [ ! -z "$T" ]; then
+                        echo "$T" | grep -oEi '[0-9]+.[0-9]+' | awk '{TOTAL+=$1; COUNT+=1} END {printf "%d%s", TOTAL/COUNT, "°C ⡇ "}'
+                    fi
                 else
                     echo -n ""
                 fi
@@ -304,11 +307,11 @@ _battery () {
             FULL=$(cat /sys/class/power_supply/BAT0/energy_full)
             OUT=$(echo "scale=2;$NOW/$FULL*100+0.5" | bc)
 
-            if [ $OUT -gt 99 ]; then
+            if (( $(echo "$OUT < 99" | bc) )); then
                 printf "B: %.f%% ⡇ " $OUT
             fi
         else
-            echo ""
+            echo -n ""
         fi
     fi
 }	# ----------  end of function _battery  ----------
