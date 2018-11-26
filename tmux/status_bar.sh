@@ -93,7 +93,7 @@ _reboot () {
 
 _cpu () {
 
-    USED_MEM=$(awk '/MemTotal/ {T=$2}; /MemFree/ {F=$2}; /Buffers/ {B=$2}; /^CACHEd/ {C=$2} END {print (T-F-B-C)/T*100}' /proc/meminfo)
+    USED_MEM=$(awk '/MemTotal/ {T=$2}; /MemFree/ {F=$2}; /Buffers/ {B=$2}; /^Cached/ {C=$2} END {print (T-F-B-C)/T*100}' /proc/meminfo)
     LOADAVG=$(cut -d' ' -f1 /proc/loadavg)
     NUMLOADAVG=$(nproc)
 
