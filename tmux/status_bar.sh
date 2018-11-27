@@ -303,18 +303,13 @@ _battery () {
 
     if [ "$COL" -gt 125 ]; then
         if [ -d /sys/class/power_supply/BAT0 ]; then
-            NOW=$(cat /sys/class/power_supply/BAT0/energy_now)
-            FULL=$(cat /sys/class/power_supply/BAT0/energy_full)
-            OUT=$(echo "scale=2;$NOW/$FULL*100+0.5" | bc)
-
-            if (( $(echo "$OUT < 99" | bc) )); then
-                printf "B: %.f%% ⡇ " $OUT
-            fi
+            awk -F"=" '/^POWER_SUPPLY_CHARGE_NOW/ {N=$2}; /^POWER_SUPPLY_CHARGE_FULL/ {F=$2}; END {P=N/F*100; if (P < 99) printf "B: %d% ⡇ ",P}' /sys/class/power_supply/BAT0/uevent
         else
             echo -n ""
         fi
     fi
 }	# ----------  end of function _battery  ----------
+
 
 _temp
 _battery
