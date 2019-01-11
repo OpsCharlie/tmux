@@ -229,41 +229,33 @@ _netspeed () {
 
     TBPS=$(echo "($T2 - $T1) * 8 / $SEC" | bc ) # convert bytes in bits
     RBPS=$(echo "($R2 - $R1) * 8 / $SEC" | bc ) # convert bytes in bits
-    if (( $(echo "$TBPS < 0" | bc ) )); then TBPS=0; fi
-    if (( $(echo "$RBPS < 0" | bc ) )); then RBPS=0; fi
-    RTBPS=$TBPS
-    RRBPS=$RBPS
 
-    # base-10 units
-    #1 kB = 1,000 bytes (Note: small k)
-    #1 MB = 1,000 kB = 1,000,000 bytes
-    UNITR="b"
-    UNITT="b"
+    RTBPS=$TBPS                                 # Result TX bps
+    RRBPS=$RBPS                                 # Result RX bps
+    UNITT="b"                                   # Unit TX
+    UNITR="b"                                   # Unit RX
 
+    TKBPS=$(( TBPS / 1000 ))                    # TX Kbps base-10 units
+    RKBPS=$(( RBPS / 1000 ))                    # RX Kbps base-10 units
 
-    if (( $(echo "$TBPS > 1000000000" | bc ) )); then
-        RTBPS=$(echo "$TBPS/1000000000" | bc )
-        UNITT="Gb"
-    elif (( $(echo "$TBPS > 1000000" | bc ) )); then
-        RTBPS=$(echo "$TBPS/1000000" | bc )
+    TMBPS=$(( TBPS / 1000000 ))                 # TX Mbps base-10 units
+    RMBPS=$(( RBPS / 1000000 ))                 # RX Mbps base-10 units
+
+    if [[ $TMBPS != 0 ]]; then
+        RTBPS=$TMBPS
         UNITT="Mb"
-    elif (( $(echo "$TBPS > 1000" | bc ) )); then
-        RTBPS=$(echo "$TBPS/1000" | bc )
+    elif [[ $TKBPS != 0 ]]; then
+        RTBPS=$TKBPS
         UNITT="Kb"
     fi
 
-
-    if (( $(echo "$RBPS > 1000000000" | bc ) )); then
-        RRBPS=$(echo "$RBPS/1000000000" | bc )
-        UNITR="Gb"
-    elif (( $(echo "$RBPS > 1000000" | bc ) )); then
-        RRBPS=$(echo "$RBPS/1000000" | bc )
+    if [[ $RMBPS != 0 ]]; then
+        RRBPS=$RMBPS
         UNITR="Mb"
-    elif (( $(echo "$RBPS > 1000" | bc ) )); then
-        RRBPS=$(echo "$RBPS/1000" | bc )
+    elif [[ $RKBPS != 0 ]]; then
+        RRBPS=$RKBPS
         UNITR="Kb"
     fi
-
 
 
     if [ "$COL" -gt 101 ]; then
