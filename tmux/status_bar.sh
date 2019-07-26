@@ -295,7 +295,7 @@ _battery () {
 
     if [ "$COL" -gt 125 ]; then
         if [ -d /sys/class/power_supply/BAT0 ]; then
-            awk -F"=" '/^POWER_SUPPLY_CHARGE_NOW/ {N=$2}; /^POWER_SUPPLY_CHARGE_FULL/ {F=$2}; END {P=N/F*100; if (P < 99) printf "B: %d% ⡇ ",P}' /sys/class/power_supply/BAT0/uevent
+            awk -F"=" '/^POWER_SUPPLY_(CHARGE|ENERGY)_NOW/ {N=$2}; /^POWER_SUPPLY_(CHARGE|ENERGY)_FULL=/ {F=$2}; END {P=N/F*100; if (P < 99) printf "B: %d%% ⡇ ",P}' /sys/class/power_supply/BAT0/uevent
         else
             echo -n ""
         fi
