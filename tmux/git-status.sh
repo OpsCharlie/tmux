@@ -24,7 +24,8 @@ function _GITSTATUS {
     printf -- "${COLOR}${STATUS}"
 }
 
-(
-    cd $1
-    _GITSTATUS
-)
+
+exec 301>/tmp/git-status.sh || exit 1
+flock -n 301 || exit 1
+cd $1
+_GITSTATUS

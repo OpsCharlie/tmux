@@ -303,6 +303,9 @@ _battery () {
 }	# ----------  end of function _battery  ----------
 
 
+
+exec 300>/var/lock/$(basename $0).pid || exit 1
+flock -n 300 || exit 1
 _temp
 _battery
 _updates_available
