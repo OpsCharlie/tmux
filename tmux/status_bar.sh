@@ -303,7 +303,7 @@ _battery () {
 }	# ----------  end of function _battery  ----------
 
 
-
+umask 111
 exec 300>/var/lock/$(basename $0).pid || exit 1
 flock -n 300 || exit 1
 _temp
