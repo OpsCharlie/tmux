@@ -198,15 +198,16 @@ _netspeed () {
     IF=$(ip route get 8.8.8.8 | head -n1 | cut -d' ' -f5)
     IP=$(/sbin/ip address show $IF | awk '/inet / {print $2}')
     IP=${IP%%/*}
+    DEVS="$(ls -d /sys/class/net/* | grep -v lo)"
 
     if [ ! -e $CACHE ]; then
         SEC1="$(date +'%s')"
         R1=0
         T1=0
-        for DEV in /sys/class/net/*; do
+        for DEV in "$DEVS"; do
             R1=$((R1 + $(cat $DEV/statistics/rx_bytes)))
         done
-        for DEV in /sys/class/net/*; do
+        for DEV in "$DEVS"; do
             T1=$((T1 + $(cat $DEV/statistics/tx_bytes)))
         done
         sleep 1
@@ -217,10 +218,10 @@ _netspeed () {
     SEC2="$(date +'%s')"
     R2=0
     T2=0
-    for DEV in /sys/class/net/*; do
+    for DEV in "$DEVS"; do
         R2=$((R2 + $(cat $DEV/statistics/rx_bytes)))
     done
-    for DEV in /sys/class/net/*; do
+    for DEV in "$DEVS"; do
         T2=$((T2 + $(cat $DEV/statistics/tx_bytes)))
     done
     echo "$SEC2 $R2 $T2" > $CACHE
