@@ -24,27 +24,29 @@ LC_NUMERIC="en_US.UTF-8"
 
 _updates_available () {
 
-    CACHE=/tmp/updates.tmux
+    if [  -n "$(uname -a | grep Ubuntu)" ]; then
+        CACHE=/tmp/updates.tmux
 
-    [ -e $CACHE ] ||  /usr/lib/update-notifier/apt-check &>$CACHE
+        [ -e $CACHE ] ||  /usr/lib/update-notifier/apt-check &>$CACHE
 
-    if test $(find $CACHE -mmin +10); then
-        /usr/lib/update-notifier/apt-check &>$CACHE
-    fi
+        if test $(find $CACHE -mmin +10); then
+            /usr/lib/update-notifier/apt-check &>$CACHE
+        fi
 
-    UPDATES=$(cut -d';' -f1 $CACHE)
-    SECUPDS=$(cut -d';' -f2 $CACHE)
+        UPDATES=$(cut -d';' -f1 $CACHE)
+        SECUPDS=$(cut -d';' -f2 $CACHE)
 
-    if [ $UPDATES -ne 0 ]; then
-        printf "%d! " $UPDATES
-    fi
+        if [ $UPDATES -ne 0 ]; then
+            printf "%d! " $UPDATES
+        fi
 
-    if [ $SECUPDS -ne 0 ]; then
-        printf "#[default]#[fg=red]"; printf "%d!! " $SECUPDS; printf "#[default]#[fg=colour136]";
-    fi
+        if [ $SECUPDS -ne 0 ]; then
+            printf "#[default]#[fg=red]"; printf "%d!! " $SECUPDS; printf "#[default]#[fg=colour136]";
+        fi
 
-    if [[ $UPDATES -ne 0 ]] || [[ $SECUPDS -ne 0 ]]; then
-        echo -ne "⡇ "
+        if [[ $UPDATES -ne 0 ]] || [[ $SECUPDS -ne 0 ]]; then
+            echo -ne "⡇ "
+        fi
     fi
 
 }	# ----------  end of function updates_available  ----------
@@ -140,7 +142,7 @@ _disk () {
         R1=
         W1=
 
-        for DEV in $(ls /sys/block/ | egrep -v "ram|loop|md"); do
+        for DEV in $(ls /sys/block/ | egrep -v "ram|loop|md|dm-|sr"); do
             R1=$((R1 + $(awk '{print $3}' /sys/block/$DEV/stat)))
             W1=$((W1 + $(awk '{print $7}' /sys/block/$DEV/stat)))
         done
@@ -153,7 +155,7 @@ _disk () {
     R2=
     W2=
 
-    for DEV in $(ls /sys/block/ | egrep -v "ram|loop|md"); do
+    for DEV in $(ls /sys/block/ | egrep -v "ram|loop|md|dm-|sr"); do
         R2=$((R2 + $(awk '{print $3}' /sys/block/$DEV/stat)))
         W2=$((W2 + $(awk '{print $7}' /sys/block/$DEV/stat)))
     done
@@ -204,10 +206,10 @@ _netspeed () {
         SEC1="$(date +'%s')"
         R1=0
         T1=0
-        for DEV in "$DEVS"; do
+        for DEV in $DEVS; do
             R1=$((R1 + $(cat $DEV/statistics/rx_bytes)))
         done
-        for DEV in "$DEVS"; do
+        for DEV in $DEVS; do
             T1=$((T1 + $(cat $DEV/statistics/tx_bytes)))
         done
         sleep 1
@@ -218,10 +220,10 @@ _netspeed () {
     SEC2="$(date +'%s')"
     R2=0
     T2=0
-    for DEV in "$DEVS"; do
+    for DEV in $DEVS; do
         R2=$((R2 + $(cat $DEV/statistics/rx_bytes)))
     done
-    for DEV in "$DEVS"; do
+    for DEV in $DEVS; do
         T2=$((T2 + $(cat $DEV/statistics/tx_bytes)))
     done
     echo "$SEC2 $R2 $T2" > $CACHE
@@ -258,7 +260,7 @@ _netspeed () {
         UNITR="Kb"
     fi
 
-
+    IF="${IF:0:5}"
     if [ "$COL" -gt 101 ]; then
         if [ "$COL" -gt 119 ]; then
             printf "%s: %s ▾%3.0f%2s ▴%3.0f%2s" $IF $IP $RRBPS $UNITR $RTBPS $UNITT
@@ -305,7 +307,7 @@ _battery () {
 
 
 umask 111
-exec 300>/var/lock/$(basename $0).pid || exit 1
+exec 300>/tmp/lock_$(basename $0).pid || exit 1
 flock -n 300 || exit 1
 _temp
 _battery
