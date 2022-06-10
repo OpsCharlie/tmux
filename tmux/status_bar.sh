@@ -260,7 +260,7 @@ _netspeed () {
         UNITR="Kb"
     fi
 
-    IF="${IF:0:5}"
+    IF="${IF:0:6}"
     if [ "$COL" -gt 101 ]; then
         if [ "$COL" -gt 119 ]; then
             printf "%s: %s ▾%3.0f%2s ▴%3.0f%2s" $IF $IP $RRBPS $UNITR $RTBPS $UNITT
