@@ -197,7 +197,7 @@ _netspeed () {
 
     CACHE=/tmp/netspeed.tmux
 
-    IF=$(ip route get 8.8.8.8 | head -n1 | cut -d' ' -f5)
+    IF=$(ip route get 8.8.8.8 | head -n1 | sed 's/.*dev \([^ ]*\) .*/\1/')
     IP=$(/sbin/ip address show $IF | awk '/inet / {print $2}')
     IP=${IP%%/*}
     DEVS="$(ls -d /sys/class/net/* | grep -v lo)"
