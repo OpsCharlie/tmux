@@ -127,7 +127,7 @@ _cpu () {
 
 _disk () {
 
-    for I in $(df -h | egrep -v '/dev/loop|@' | awk '{ print $5 }'  | grep -v "Use%" | tr -d "%"); do
+    for I in $(df -h | egrep -v '/dev/loop|@|efivars' | awk '{ print $5 }'  | grep -v "Use%" | tr -d "%"); do
         if [ "$I" -gt "90" ]; then
             X=""
             echo -ne "#[default]#[fg=red]DF!!#[default]#[fg=colour136] ⡇ "
