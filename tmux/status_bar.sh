@@ -195,7 +195,8 @@ _disk () {
     # printf "IO: ◂%3.0f%2s ▸%3.0f%2s ⡇ " "$RRBPS" $UNITR "$RWBPS" $UNITW
  
     SEC=$((SEC2 - SEC1))
-    SEC=${SEC:-1}  # avoid division by zero
+    [[ $SEC -eq 0 ]] && SEC=1  # avoid division by zero
+
 
     RBPS=$(( (R2 - R1) * 512 / SEC ))  # 512 bytes/block
     WBPS=$(( (W2 - W1) * 512 / SEC ))
@@ -280,7 +281,8 @@ _netspeed () {
     #     printf "▾%3.0f%2s ▴%3.0f%2s" "$RRBPS" "$UNITR" "$RTBPS" "$UNITT"
     # fi
     SEC=$((SEC2 - SEC1))
-    SEC=${SEC:-1}
+    [[ $SEC -eq 0 ]] && SEC=1  # avoid division by zero
+
 
     RBPS=$(( (R2 - R1) / SEC ))
     TBPS=$(( (T2 - T1) / SEC ))
