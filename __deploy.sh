@@ -9,12 +9,12 @@ DIR=$(dirname "$(readlink -f "$0")")
 if [ -z "$P" ]; then
     echo copy files to homedir
     rsync -a --delete "$DIR/tmux/" ~/.tmux/
-    cp $DIR/tmux.conf ~/.tmux.conf
+    cp "$DIR/tmux.conf" ~/.tmux.conf
 
     exit $?
 fi
 
-if [ "$(sed "s/.*\(:\).*/\1/g" <<<$P)" = ":" ]; then
+if [[ ${P//*:} != "$P" ]]; then
     echo "Usage:"
     echo "$0               to deploy local"
     echo "$0 user@host     to deploy remote"
