@@ -117,9 +117,9 @@ _disk() {
   W2=0
 
   # Read disk stats in a single loop, skipping unwanted devices
-  for DEV in /sys/block/sd*/stat /sys/block/nvme*/stat; do
+  for DEV in /sys/block/sd*/stat /sys/block/nvme*/stat /sys/block/dm-*/stat; do
     [[ -r $DEV ]] || continue
-    read -r _ _ _ r _ _ _ w _ <"$DEV" || continue && ((R2 += r, W2 += w))
+    read -r _ _ r _ _ _ w _ _ _ <"$DEV" || continue && ((R2 += r, W2 += w))
   done
 
   if [[ ! -e $CACHE ]]; then
