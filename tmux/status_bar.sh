@@ -7,7 +7,7 @@
 #
 #   DESCRIPTION: script to generate statusbar in tmux (performance optimized)
 #
-#  REQUIREMENTS: awk, gnu find, tmux
+#  REQUIREMENTS: /usr/bin/awk, gnu find, tmux
 #          BUGS: ---
 #         NOTES: Optimized for performance with caching and parallel execution
 #        AUTHOR: Carl Verstraete
@@ -16,40 +16,40 @@
 #      REVISION: 31-01-26
 #===============================================================================
 
-# Performance optimizations
 COL=$(tmux display -p "#{window_width}" 2>/dev/null || echo 180)
-LC_NUMERIC="en_US.UTF-8"
+export LC_NUMERIC=C
 CACHE_DIR="/tmp/tmux-$UID"
 CACHE_TTL=10 # Cache for 10 seconds
 
-# Create cache directory
-mkdir -p "$CACHE_DIR"
+/usr/bin/mkdir -p "$CACHE_DIR"
 
-# Generic cache function
 _cache() {
   local key="$1"
   local ttl="$2"
   local cmd="$3"
   local cache_file="$CACHE_DIR/$key"
+  local NOW
+  NOW=$(/usr/bin/date +%s)
 
-  if find "$cache_file" -newermt "-$ttl seconds" -print -quit | grep -q .; then
-    cat "$cache_file" 2>/dev/null || echo ""
-    return
+  if [[ -f "$cache_file" ]]; then
+    mtime=$(/usr/bin/stat -c %Y "$cache_file" 2>/dev/null) || mtime=0
+    if ((NOW - mtime < ttl)); then
+      /usr/bin/cat "$cache_file"
+      return
+    fi
   fi
 
-  eval "$cmd" >"$cache_file" 2>/dev/null
-  cat "$cache_file"
+  /bin/bash -c "CACHE_DIR=\$1; $cmd" _ "$CACHE_DIR" >"$cache_file" 
+  /usr/bin/cat "$cache_file"
 }
 
+
 _updates_available() {
-  # Check for available system updates and print status (cached)
+  [[ ! -d /etc/lsb-release ]] || return
 
-  [[ -d /etc/lsb-release ]] || return
-
-  _cache "updates" 600 "
+  _cache "updates" 900 "
         CACHE=\"\$CACHE_DIR/updates.tmux\"
-        /usr/lib/update-notifier/apt-check &>\$CACHE 2>/dev/null
-
+        /usr/lib/update-notifier/apt-check 2>\$CACHE
         IFS=';' read -r UPDATES SECUPDS < \"\$CACHE\" 2>/dev/null || { UPDATES=0; SECUPDS=0; }
         if [[ \$UPDATES -ne 0 ]]; then
             printf \"%d! \" \"\$UPDATES\"
@@ -61,67 +61,58 @@ _updates_available() {
             echo -ne \"⡇ \"
         fi
     "
-} # ----------  end of function updates_available  ----------
+}
+
 
 _uptime() {
-  # Print system uptime in a human-readable format
-
   if [[ $COL -gt 75 ]]; then
-    awk '{d=int($1/86400); if(d>1) printf "%dd ", d; printf "%dh%dm ⡇ ", int($1%86400/3600), int($1%3600/60)}' /proc/uptime
+    /usr/bin/awk '{d=int($1/86400); if(d>1) printf "%dd ", d; printf "%dh%dm ⡇ ", int($1%86400/3600), int($1%3600/60)}' /proc/uptime
   fi
+}
 
-} # ----------  end of function uptime  ----------
 
 _reboot() {
-  # Indicate if a system reboot is required
-
   [[ -e "/var/run/reboot-required" ]] && printf "%s" "⟳ ⡇ "
+}
 
-} # ----------  end of function reboot  ----------
 
 _cpu() {
-  # Print CPU load, memory usage, and user count
-
-  # Cache Mem and Users
-  USED_MEM=$(awk '/MemTotal/ {T=$2} /MemFree/ {F=$2} /Buffers/ {B=$2} /^Cached/ {C=$2} END {if(T) printf "%.0f", (T-F-B-C)/T*100; else print 0}' /proc/meminfo)
-  USERS=$(who | awk '!seen[$1]++ {count++} END {print count+0}')
+  USED_MEM=$(/usr/bin/awk '/MemTotal/ {t=$2} /MemAvailable/ {a=$2} END { if (t && a) printf "%.0f", (t-a)/t*100; else print 0 }' /proc/meminfo)
+  USERS=$(/usr/bin/who | /usr/bin/awk '!seen[$1]++ {count++} END {print count+0}')
 
   read -r LOADAVG _ </proc/loadavg
-  NUMLOADAVG=$(getconf _NPROCESSORS_ONLN 2>/dev/null)
+  NUMLOADAVG=$(/usr/bin/getconf _NPROCESSORS_ONLN 2>/dev/null)
 
   if [[ $COL -gt 74 ]]; then
     [[ $USERS -ne 1 ]] && printf "U:%d ⡇ " "$USERS"
-    awk -v l="$LOADAVG" -v n="$NUMLOADAVG" 'BEGIN {if (l > n) printf "L:#[default]#[fg=red]%.2f#[default]#[fg=colour136] ⡇ ", l; else printf "L:%.2f ⡇ ", l}'
+    /usr/bin/awk -v l="$LOADAVG" -v n="$NUMLOADAVG" 'BEGIN {if (l > n) printf "L:#[default]#[fg=red]%.2f#[default]#[fg=colour136] ⡇ ", l; else printf "L:%.2f ⡇ ", l}'
     if ((USED_MEM > 80)); then
       printf "M:#[default]#[fg=red]%s%%#[default]#[fg=colour136] ⡇ " "$USED_MEM"
     else
       printf "M:%s%% ⡇ " "$USED_MEM"
     fi
   else
-    awk -v l="$LOADAVG" -v n="$NUMLOADAVG" 'BEGIN {if (l > n) printf "L:#[default]#[fg=red]%.2f#[default]#[fg=colour136] ⡇ ", l; else printf "L:%.2f ⡇ ", l}'
+    /usr/bin/awk -v l="$LOADAVG" -v n="$NUMLOADAVG" 'BEGIN {if (l > n) printf "L:#[default]#[fg=red]%.2f#[default]#[fg=colour136] ⡇ ", l; else printf "L:%.2f ⡇ ", l}'
   fi
-} # ----------  end of function cpu  ----------
+}
+
 
 _disk() {
-  # Print disk usage warning and current disk IO rates
-
-  _cache "disk_usage" "$CACHE_TTL" "
-        awk 'NR>1 && \$1 !~ /loop|efivars|@|\\/tmp\\/\\.mount/ && \$2+0>90 {exit 1}' <(df -h --output=target,pcent) 2>/dev/null || echo -ne '#[default]#[fg=red]DF!!#[default]#[fg=colour136] ⡇ '
-    "
-
   local CACHE="$CACHE_DIR/disk.tmux"
   local SEC2 R2 W2 SEC1 R1 W1 RBPS WBPS RDISK WDISK
 
-  SEC2=$(date +%s)
+  SEC2=$(/usr/bin/date +%s)
   R2=0
   W2=0
 
-  # Read disk stats in a single loop, skipping unwanted devices
   for DEV in /sys/block/sd*/stat /sys/block/nvme*/stat /sys/block/dm-*/stat; do
     [[ -r $DEV ]] || continue
-    read -r _ _ r _ _ _ w _ _ _ <"$DEV" || continue && ((R2 += r, W2 += w))
+    if read -r _ _ r _ _ _ w _ _ _ <"$DEV"; then
+      ((R2 += r, W2 += w))
+    fi
   done
 
+  # Read previous values from cache, or initialize
   if [[ ! -e $CACHE ]]; then
     echo "$SEC2 $R2 $W2" >"$CACHE"
     SEC1=$SEC2
@@ -135,34 +126,53 @@ _disk() {
   SEC=$((SEC2 - SEC1))
   ((SEC == 0)) && SEC=1 # avoid division by zero
 
-  RBPS=$(((R2 - R1) * 512 / SEC)) # 512 bytes/block
+  # Calculate bytes per second, with fallback
+  RBPS=$(((R2 - R1) * 512 / SEC))
   WBPS=$(((W2 - W1) * 512 / SEC))
+  RBPS=${RBPS:-0}
+  WBPS=${WBPS:-0}
 
-  RDISK=$(numfmt --to=iec --suffix=B <<<"$RBPS")
-  WDISK=$(numfmt --to=iec --suffix=B <<<"$WBPS")
+  # Format for human-readable output
+  RDISK=$(/usr/bin/numfmt --to=iec --suffix=B <<<"$RBPS")
+  WDISK=$(/usr/bin/numfmt --to=iec --suffix=B <<<"$WBPS")
+  RDISK=${RDISK:-0B}
+  WDISK=${WDISK:-0B}
+
   printf "IO: ◂%5s ▸%5s ⡇ " "$RDISK" "$WDISK"
-} # ----------  end of function disk  ----------
+}
+
+
+_disk_warn() {
+  _cache "disk_usage" "$CACHE_TTL" "
+     /usr/bin/df -h --output=target,pcent 2>/dev/null |
+     /usr/bin/awk 'NR>1 && \$1 !~ /loop|efivars|@|\\/tmp\\/\\.mount/ && \$2+0>90 {printf \"#[default]#[fg=red]DF!!#[default]#[fg=colour136] ⡇\"; exit 0}'
+     "
+}
+
+
+_get_netinfo() {
+  _cache "netinfo" 30 "
+    IF=\$(/usr/bin/ip route get 8.8.8.8 2>/dev/null | /usr/bin/awk '{for(i=1;i<=NF;i++) if (\$i==\"dev\") print \$(i+1); exit}')
+    IP=\$(/usr/bin/ip -o -4 addr show \"\$IF\" 2>/dev/null | /usr/bin/awk '{split(\$4,a,\"/\"); print a[1]}')
+    echo \"\$IF \$IP\"
+  "
+}
+
 
 _netspeed() {
-  # Print current network speed (RX/TX) for main interface
-
   local CACHE="$CACHE_DIR/netspeed.tmux"
   local IF IP SEC2 R2 T2 SEC1 R1 T1 RBPS TBPS RNET TNET
 
-  IF=$(ip route get 8.8.8.8 2>/dev/null | awk '{for(i=1;i<=NF;i++) if ($i=="dev") print $(i+1); exit}')
+  read -r IF IP <<<"$(_get_netinfo)"
   [[ -z "$IF" ]] && return
 
-  IP=$(ip -oneline -family inet addr show "$IF" 2>/dev/null | awk '{split($4, a, "/"); print a[1]}')
-
-  SEC2=$(date +%s)
+  SEC2=$(/usr/bin/date +%s)
   read -r R2 2>/dev/null <"/sys/class/net/$IF/statistics/rx_bytes"
   read -r T2 2>/dev/null <"/sys/class/net/$IF/statistics/tx_bytes"
   if [[ ! -e $CACHE ]]; then
     echo "$SEC2 $R2 $T2" >"$CACHE"
-    SEC1=$SEC2
-    R1=$R2
-    T1=$T2
-    sleep 1
+    printf "▾0B/s ▴0B/s"
+    return
   else
     read -r SEC1 R1 T1 <"$CACHE"
     echo "$SEC2 $R2 $T2" >"$CACHE"
@@ -174,8 +184,8 @@ _netspeed() {
   RBPS=$(((R2 - R1) / SEC))
   TBPS=$(((T2 - T1) / SEC))
 
-  RNET=$(numfmt --to=iec --suffix=B/s <<<"$RBPS")
-  TNET=$(numfmt --to=iec --suffix=B/s <<<"$TBPS")
+  RNET=$(/usr/bin/numfmt --to=iec --suffix=B/s <<<"$RBPS")
+  TNET=$(/usr/bin/numfmt --to=iec --suffix=B/s <<<"$TBPS")
 
   IF="${IF:0:6}"
   if [[ "$COL" -gt 101 ]]; then
@@ -187,10 +197,10 @@ _netspeed() {
   else
     printf "▾%7s ▴%7s" "$RNET" "$TNET"
   fi
-} # ----------  end of function netspeed  ----------
+}
+
 
 _temp() {
-  # Print average CPU temperature if available (cached)
   [[ "$COL" -le 110 ]] && return
 
   local temps=()
@@ -221,23 +231,23 @@ _temp() {
 
       if [[ ${#temps[@]} -gt 0 ]]; then
         local total=0
+
         for t in "${temps[@]}"; do
           total=$((total + t))
         done
-        awk "BEGIN {printf \"%.1f°C ⡇ \", $total/${#temps[@]}}"
+        /usr/bin/awk "BEGIN {printf \"%.1f°C ⡇ \", $total/${#temps[@]}}"
       fi
       ;;
   esac
-} # ----------  end of function _temp  ----------
+}
+
 
 _battery() {
-  # Print battery percentage if available (cached)
-
   [[ "$COL" -le 125 ]] && return
 
   if [[ -d /sys/class/power_supply/BAT0 ]]; then
     _cache "battery" 60 "
-            awk -F= '
+            /usr/bin/awk -F= '
             /_NOW/ {N=\$2}
             /_FULL/ {F=\$2}
             END {
@@ -248,20 +258,19 @@ _battery() {
             }' /sys/class/power_supply/BAT0/uevent 2>/dev/null || echo ''
         "
   fi
-} # ----------  end of function _battery  ----------
+}
 
-umask 111
-exec 300>/tmp/lock_"$(basename "$0")".pid || exit 1
-flock -n 300 || exit 1
+exec 300>/tmp/lock_"$(/usr/bin/basename "$0")".pid || exit 1
+/usr/bin/flock -n 300 || exit 1
 
-segments=(_temp _battery _updates_available _uptime _reboot _cpu _disk _netspeed)
+segments=(_temp _battery _updates_available _uptime _reboot _cpu _disk_warn _disk _netspeed)
 declare -A results
 
 # Run each segment in the background, redirecting output to a temp file
 for seg in "${segments[@]}"; do
   tmpfile="$CACHE_DIR/${seg}.out"
-  "$seg" >"$tmpfile" &
-  pids[$seg]=$!
+  "$seg" >"$tmpfile" 2>&1 &
+  pids["$seg"]=$!
 done
 
 # Wait for all to finish
@@ -271,4 +280,4 @@ for seg in "${segments[@]}"; do
 done
 
 # Combine results in desired order
-echo -n "${results[_temp]}${results[_battery]}${results[_updates_available]}${results[_uptime]}${results[_reboot]}${results[_cpu]}${results[_disk]}${results[_netspeed]}"
+echo -n "${results[_temp]}${results[_battery]}${results[_updates_available]}${results[_uptime]}${results[_reboot]}${results[_cpu]}${results[_disk_warn]}${results[_disk]}${results[_netspeed]}"
