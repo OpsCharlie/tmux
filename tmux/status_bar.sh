@@ -45,21 +45,38 @@ _cache() {
 
 
 _updates_available() {
-  [[ ! -d /etc/lsb-release ]] || return
-
   _cache "updates" 900 "
-        CACHE=\"\$CACHE_DIR/updates.tmux\"
-        /usr/lib/update-notifier/apt-check 2>\$CACHE
-        IFS=';' read -r UPDATES SECUPDS < \"\$CACHE\" 2>/dev/null || { UPDATES=0; SECUPDS=0; }
-        if [[ \$UPDATES -ne 0 ]]; then
-            printf \"%d! \" \"\$UPDATES\"
-        fi
-        if [[ \$SECUPDS -ne 0 ]]; then
-            printf \"#[default]#[fg=red]%d!! #[default]#[fg=colour136]\" \"\$SECUPDS\"
-        fi
-        if [[ \$UPDATES -ne 0 ]] || [[ \$SECUPDS -ne 0 ]]; then
-            echo -ne \"⡇ \"
-        fi
+     if command -v pacman >/dev/null; then
+       yay_installed=\"false\"
+       paru_installed=\"false\"
+       if command -v yay >/dev/null; then
+         yay_installed=\"true\"
+       fi
+       if command -v paru >/dev/null; then
+         paru_installed=\"true\"
+       fi
+       if [[ \$yay_installed == \"true\" ]] && [[ \$paru_installed == \"false\" ]]; then
+         aur_helper=\"yay\"
+       elif [[ \$yay_installed == \"false\" ]] && [[ \$paru_installed == \"true\" ]]; then
+         aur_helper=\"paru\"
+       else
+         aur_helper=\"yay\"
+       fi
+       UPDATES_aur=\$(\$aur_helper -Qum | wc -l)
+       UPDATES_pacman=\$(checkupdates | wc -l)
+       UPDATES=\$((UPDATES_aur+UPDATES_pacman))
+     elif command -v dnf >/dev/null; then
+       UPDATES=\$(dnf check-update -q | grep -c '^[a-z0-9]')
+     elif command -v apt >/dev/null; then
+       UPDATES=\$(apt list --upgradable 2>/dev/null | tail -n +2 | wc -l)
+     else
+       UPDATES=0
+     fi
+     if [[ \$UPDATES -ne 0 ]]; then
+       printf \"%d! ⡇ \" \"\$UPDATES\"
+     else
+       echo -ne \"⡇ \"
+     fi
     "
 }
 
@@ -72,7 +89,9 @@ _uptime() {
 
 
 _reboot() {
-  [[ -e "/var/run/reboot-required" ]] && printf "%s" "⟳ ⡇ "
+  [[ -e "/run/reboot-required" ]] && { printf "%s" "⟳ ⡇ "; return; }
+
+  file /boot/vmlinuz* 2>/dev/null | grep -q "$(uname -r)" || printf "%s" "⟳ ⡇ "
 }
 
 
