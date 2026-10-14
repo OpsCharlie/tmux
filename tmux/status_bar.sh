@@ -16,9 +16,10 @@
 #      REVISION: 31-01-26
 #===============================================================================
 
-COL=$(tmux display -p "#{window_width}" 2>/dev/null || echo 180)
+COL=$(tmux display -p "#{client_width}" 2>/dev/null || echo 180)
 export LC_NUMERIC=C
-CACHE_DIR="/tmp/tmux-$UID"
+# Deliberately not /tmp/tmux-$UID: that is tmux's own socket directory
+CACHE_DIR="/tmp/tmux-status-$UID"
 CACHE_TTL=10 # Cache for 10 seconds
 
 /usr/bin/mkdir -p "$CACHE_DIR"
@@ -28,7 +29,7 @@ _cache() {
   local ttl="$2"
   local cmd="$3"
   local cache_file="$CACHE_DIR/$key"
-  local NOW
+  local NOW mtime tmp
   NOW=$(/usr/bin/date +%s)
 
   if [[ -f "$cache_file" ]]; then
@@ -39,8 +40,17 @@ _cache() {
     fi
   fi
 
-  /bin/bash -c "CACHE_DIR=\$1; $cmd" _ "$CACHE_DIR" >"$cache_file" 
-  /usr/bin/cat "$cache_file"
+  # Write to a temp file and move it into place only on success, so a failed or
+  # interrupted command cannot cache an empty result for the rest of the TTL.
+  # The move is also atomic, so a concurrent reader never sees a partial file.
+  tmp=$(/usr/bin/mktemp "$cache_file.XXXXXX") || return
+  if /bin/bash -c "CACHE_DIR=\$1; $cmd" _ "$CACHE_DIR" >"$tmp"; then
+    /bin/mv -f "$tmp" "$cache_file"
+    /usr/bin/cat "$cache_file"
+  else
+    /bin/rm -f "$tmp"
+    [[ -f "$cache_file" ]] && /usr/bin/cat "$cache_file"
+  fi
 }
 
 
@@ -89,9 +99,15 @@ _uptime() {
 
 
 _reboot() {
-  [[ -e "/run/reboot-required" ]] && { printf "%s" "⟳ ⡇ "; return; }
-
-  file /boot/vmlinuz* 2>/dev/null | grep -q "$(uname -r)" || printf "%s" "⟳ ⡇ "
+  # The answer only changes on a kernel upgrade, and `file` on the kernel image
+  # is the most expensive thing here, so do not run it every status interval.
+  _cache "reboot" 300 "
+     if [[ -e /run/reboot-required ]]; then
+       printf '%s' '⟳ ⡇ '
+     elif ! file /boot/vmlinuz* 2>/dev/null | grep -q \"\$(uname -r)\"; then
+       printf '%s' '⟳ ⡇ '
+     fi
+    "
 }
 
 
@@ -118,15 +134,17 @@ _cpu() {
 
 _disk() {
   local CACHE="$CACHE_DIR/disk.tmux"
-  local SEC2 R2 W2 SEC1 R1 W1 RBPS WBPS RDISK WDISK
+  local SEC SEC2 R2 W2 SEC1 R1 W1 RBPS WBPS RDISK WDISK DEV
 
   SEC2=$(/usr/bin/date +%s)
   R2=0
   W2=0
 
-  for DEV in /sys/block/sd*/stat /sys/block/nvme*/stat /sys/block/dm-*/stat; do
-    [[ -r $DEV ]] || continue
-    if read -r _ _ r _ _ _ w _ _ _ <"$DEV"; then
+  # Only physical devices: a `device` symlink excludes dm-* and loop*, which
+  # are layered on top of the real disks and would be counted a second time.
+  for DEV in /sys/block/*/; do
+    [[ -e "$DEV/device" && -r "$DEV/stat" ]] || continue
+    if read -r _ _ r _ _ _ w _ _ _ <"$DEV/stat"; then
       ((R2 += r, W2 += w))
     fi
   done
@@ -148,8 +166,9 @@ _disk() {
   # Calculate bytes per second, with fallback
   RBPS=$(((R2 - R1) * 512 / SEC))
   WBPS=$(((W2 - W1) * 512 / SEC))
-  RBPS=${RBPS:-0}
-  WBPS=${WBPS:-0}
+  # Guard against a stale cache producing negative deltas
+  ((RBPS < 0)) && RBPS=0
+  ((WBPS < 0)) && WBPS=0
 
   # Format for human-readable output
   RDISK=$(/usr/bin/numfmt --to=iec --suffix=B <<<"$RBPS")
@@ -180,14 +199,17 @@ _get_netinfo() {
 
 _netspeed() {
   local CACHE="$CACHE_DIR/netspeed.tmux"
-  local IF IP SEC2 R2 T2 SEC1 R1 T1 RBPS TBPS RNET TNET
+  local IF IP SEC SEC2 R2 T2 SEC1 R1 T1 RBPS TBPS RNET TNET
 
   read -r IF IP <<<"$(_get_netinfo)"
   [[ -z "$IF" ]] && return
 
   SEC2=$(/usr/bin/date +%s)
-  read -r R2 2>/dev/null <"/sys/class/net/$IF/statistics/rx_bytes"
-  read -r T2 2>/dev/null <"/sys/class/net/$IF/statistics/tx_bytes"
+  read -r R2 2>/dev/null <"/sys/class/net/$IF/statistics/rx_bytes" || R2=""
+  read -r T2 2>/dev/null <"/sys/class/net/$IF/statistics/tx_bytes" || T2=""
+  # Counters unreadable (e.g. cached IF went stale/away): skip this cycle
+  # rather than emitting garbage/blank speeds.
+  [[ -z "$R2" || -z "$T2" ]] && return
   if [[ ! -e $CACHE ]]; then
     echo "$SEC2 $R2 $T2" >"$CACHE"
     printf "▾0B/s ▴0B/s"
@@ -202,6 +224,9 @@ _netspeed() {
 
   RBPS=$(((R2 - R1) / SEC))
   TBPS=$(((T2 - T1) / SEC))
+  # Guard against a stale/truncated cache producing negative deltas
+  ((RBPS < 0)) && RBPS=0
+  ((TBPS < 0)) && TBPS=0
 
   RNET=$(/usr/bin/numfmt --to=iec --suffix=B/s <<<"$RBPS")
   TNET=$(/usr/bin/numfmt --to=iec --suffix=B/s <<<"$TBPS")
@@ -264,26 +289,33 @@ _temp() {
 _battery() {
   [[ "$COL" -le 125 ]] && return
 
-  if [[ -d /sys/class/power_supply/BAT0 ]]; then
+  if [[ -r /sys/class/power_supply/BAT0/capacity ]]; then
+    # `capacity` is the percentage the kernel already computed. Deriving it from
+    # uevent is fragile: /_NOW/ also matches VOLTAGE_NOW and /_FULL/ also
+    # matches CHARGE_FULL_DESIGN, so the result depends on field ordering.
     _cache "battery" 60 "
-            /usr/bin/awk -F= '
-            /_NOW/ {N=\$2}
-            /_FULL/ {F=\$2}
-            END {
-                if (N && F) {
-                    P=N/F*100
-                    if (P < 99) printf \"B: %d%% ⡇ \", P
-                }
-            }' /sys/class/power_supply/BAT0/uevent 2>/dev/null || echo ''
+            read -r P </sys/class/power_supply/BAT0/capacity
+            [[ \$P -lt 99 ]] && printf 'B: %d%% ⡇ ' \"\$P\"
+            exit 0
         "
   fi
 }
 
-exec 300>/tmp/lock_"$(/usr/bin/basename "$0")".pid || exit 1
-/usr/bin/flock -n 300 || exit 1
+LAST_OUTPUT="$CACHE_DIR/last_output"
+
+# The lock lives in the per-user cache dir: a fixed name in shared /tmp would be
+# owned by whoever ran first, and every other user would fail to open it.
+exec 300>"$CACHE_DIR/status_bar.lock" || exit 1
+if ! /usr/bin/flock -n 300; then
+  # A previous run is still going (a slow `checkupdates`, say). Reprint its
+  # output rather than exiting empty, which would blank the status bar.
+  [[ -f "$LAST_OUTPUT" ]] && /usr/bin/cat "$LAST_OUTPUT"
+  exit 0
+fi
 
 segments=(_temp _battery _updates_available _uptime _reboot _cpu _disk_warn _disk _netspeed)
 declare -A results
+declare -A pids
 
 # Run each segment in the background, redirecting output to a temp file
 for seg in "${segments[@]}"; do
@@ -299,4 +331,5 @@ for seg in "${segments[@]}"; do
 done
 
 # Combine results in desired order
-echo -n "${results[_temp]}${results[_battery]}${results[_updates_available]}${results[_uptime]}${results[_reboot]}${results[_cpu]}${results[_disk_warn]}${results[_disk]}${results[_netspeed]}"
+output="${results[_temp]}${results[_battery]}${results[_updates_available]}${results[_uptime]}${results[_reboot]}${results[_cpu]}${results[_disk_warn]}${results[_disk]}${results[_netspeed]}"
+printf '%s' "$output" | /usr/bin/tee "$LAST_OUTPUT"
